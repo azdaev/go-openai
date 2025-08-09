@@ -45,7 +45,6 @@ func (v *ReasoningValidator) Validate(request ChatCompletionRequest) error {
 	if !o1Series && !o3Series && !o4Series {
 		return nil
 	}
-
 	if err := v.validateReasoningModelParams(request); err != nil {
 		return err
 	}

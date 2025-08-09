@@ -307,8 +307,17 @@ type ChatCompletionRequest struct {
 	// Store can be set to true to store the output of this completion request for use in distillations and evals.
 	// https://platform.openai.com/docs/api-reference/chat/create#chat-create-store
 	Store bool `json:"store,omitempty"`
+<<<<<<< Updated upstream
 	// Controls effort on reasoning for reasoning models. It can be set to "low", "medium", or "high".
 	ReasoningEffort string `json:"reasoning_effort,omitempty"`
+=======
+	// Controls effort on reasoning for reasoning models. It can be set to "minimal", "low", "medium", or "high".
+	ReasoningEffort string `json:"reasoning_effort,omitempty"`
+	// Verbosity controls how many output tokens are generated and the level of conciseness in the response.
+	// Valid values are "low", "medium", or "high". Defaults to model-specific behavior (typically medium).
+	// This parameter is primarily introduced with GPT-5.
+	Verbosity string `json:"verbosity,omitempty"`
+>>>>>>> Stashed changes
 	// Metadata to store with the completion.
 	Metadata map[string]string `json:"metadata,omitempty"`
 	// Configuration for a predicted output.
