@@ -451,8 +451,14 @@ type ChatCompletionResponse struct {
 	SystemFingerprint   string                 `json:"system_fingerprint"`
 	PromptFilterResults []PromptFilterResult   `json:"prompt_filter_results,omitempty"`
 	ServiceTier         ServiceTier            `json:"service_tier,omitempty"`
+	SearchResults       []SearchResult         `json:"search_results,omitempty"`
 
 	httpHeader
+}
+
+type SearchResult struct {
+	Title string `json:"title"`
+	Url   string `json:"url"`
 }
 
 // CreateChatCompletion — API call to Create a completion for the chat message.
