@@ -457,8 +457,8 @@ type ChatCompletionResponse struct {
 }
 
 type SearchResult struct {
-	Title string `json:"title"`
-	Url   string `json:"url"`
+	Title string `json:"title,omitempty"`
+	Url   string `json:"url,omitempty"`
 }
 
 // CreateChatCompletion — API call to Create a completion for the chat message.
