@@ -63,7 +63,7 @@ func TestImageFormBuilderFailures(t *testing.T) {
 				fb.mockWriteField = func(string, string) error { return nil }
 				fb.mockClose = func() error { return nil }
 			},
-			req: ImageEditRequest{Image: bytes.NewBuffer(nil), Mask: bytes.NewBuffer(nil)},
+			req: ImageEditRequest{Images: []io.Reader{bytes.NewBuffer(nil)}, Mask: bytes.NewBuffer(nil)},
 		},
 		{
 			name: "mask",
@@ -77,7 +77,7 @@ func TestImageFormBuilderFailures(t *testing.T) {
 				fb.mockWriteField = func(string, string) error { return nil }
 				fb.mockClose = func() error { return nil }
 			},
-			req: ImageEditRequest{Image: bytes.NewBuffer(nil), Mask: bytes.NewBuffer(nil)},
+			req: ImageEditRequest{Images: []io.Reader{bytes.NewBuffer(nil)}, Mask: bytes.NewBuffer(nil)},
 		},
 		{
 			name: "prompt",
@@ -91,7 +91,7 @@ func TestImageFormBuilderFailures(t *testing.T) {
 				}
 				fb.mockClose = func() error { return nil }
 			},
-			req: ImageEditRequest{Image: bytes.NewBuffer(nil), Mask: bytes.NewBuffer(nil)},
+			req: ImageEditRequest{Images: []io.Reader{bytes.NewBuffer(nil)}, Mask: bytes.NewBuffer(nil)},
 		},
 		{
 			name: "n",
@@ -105,7 +105,7 @@ func TestImageFormBuilderFailures(t *testing.T) {
 				}
 				fb.mockClose = func() error { return nil }
 			},
-			req: ImageEditRequest{Image: bytes.NewBuffer(nil), Mask: bytes.NewBuffer(nil)},
+			req: ImageEditRequest{Images: []io.Reader{bytes.NewBuffer(nil)}, Mask: bytes.NewBuffer(nil)},
 		},
 		{
 			name: "size",
@@ -119,7 +119,7 @@ func TestImageFormBuilderFailures(t *testing.T) {
 				}
 				fb.mockClose = func() error { return nil }
 			},
-			req: ImageEditRequest{Image: bytes.NewBuffer(nil), Mask: bytes.NewBuffer(nil)},
+			req: ImageEditRequest{Images: []io.Reader{bytes.NewBuffer(nil)}, Mask: bytes.NewBuffer(nil)},
 		},
 		{
 			name: "response_format",
@@ -133,7 +133,7 @@ func TestImageFormBuilderFailures(t *testing.T) {
 				}
 				fb.mockClose = func() error { return nil }
 			},
-			req: ImageEditRequest{Image: bytes.NewBuffer(nil), Mask: bytes.NewBuffer(nil)},
+			req: ImageEditRequest{Images: []io.Reader{bytes.NewBuffer(nil)}, Mask: bytes.NewBuffer(nil), ResponseFormat: "url"},
 		},
 		{
 			name: "close",
@@ -142,7 +142,7 @@ func TestImageFormBuilderFailures(t *testing.T) {
 				fb.mockWriteField = func(string, string) error { return nil }
 				fb.mockClose = func() error { return mockFailedErr }
 			},
-			req: ImageEditRequest{Image: bytes.NewBuffer(nil), Mask: bytes.NewBuffer(nil)},
+			req: ImageEditRequest{Images: []io.Reader{bytes.NewBuffer(nil)}, Mask: bytes.NewBuffer(nil)},
 		},
 	}
 
@@ -165,7 +165,7 @@ func TestImageFormBuilderFailures(t *testing.T) {
 		client := newClient(fb)
 		client.requestBuilder = &failingRequestBuilder{}
 
-		_, err := client.CreateEditImage(ctx, ImageEditRequest{Image: bytes.NewBuffer(nil), Mask: bytes.NewBuffer(nil)})
+		_, err := client.CreateEditImage(ctx, ImageEditRequest{Images: []io.Reader{bytes.NewBuffer(nil)}, Mask: bytes.NewBuffer(nil)})
 		checks.ErrorIs(t, err, errTestRequestBuilderFailed, "CreateEditImage should return error if request builder fails")
 	})
 }

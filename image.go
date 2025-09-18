@@ -159,15 +159,15 @@ func (f file) ContentType() string {
 // ImageEditRequest represents the request structure for the image API.
 // Use WrapReader to wrap an io.Reader with filename and Content-type.
 type ImageEditRequest struct {
-	Image          io.Reader `json:"image,omitempty"`
-	Mask           io.Reader `json:"mask,omitempty"`
-	Prompt         string    `json:"prompt,omitempty"`
-	Model          string    `json:"model,omitempty"`
-	N              int       `json:"n,omitempty"`
-	Size           string    `json:"size,omitempty"`
-	ResponseFormat string    `json:"response_format,omitempty"`
-	Quality        string    `json:"quality,omitempty"`
-	User           string    `json:"user,omitempty"`
+	Images         []io.Reader `json:"image,omitempty"`
+	Mask           io.Reader   `json:"mask,omitempty"`
+	Prompt         string      `json:"prompt,omitempty"`
+	Model          string      `json:"model,omitempty"`
+	N              int         `json:"n,omitempty"`
+	Size           string      `json:"size,omitempty"`
+	ResponseFormat string      `json:"response_format,omitempty"`
+	Quality        string      `json:"quality,omitempty"`
+	User           string      `json:"user,omitempty"`
 }
 
 // CreateEditImage - API call to create an image. This is the main endpoint of the DALL-E API.
@@ -176,9 +176,11 @@ func (c *Client) CreateEditImage(ctx context.Context, request ImageEditRequest) 
 	builder := c.createFormBuilder(body)
 
 	// image, filename verification can be postponed
-	err = builder.CreateFormFileReader("image", request.Image, "")
-	if err != nil {
-		return
+	for _, image := range request.Images {
+		err = builder.CreateFormFileReader("image", image, "")
+		if err != nil {
+			return
+		}
 	}
 
 	// mask, it is optional
