@@ -177,7 +177,7 @@ func (c *Client) CreateEditImage(ctx context.Context, request ImageEditRequest) 
 
 	// image, filename verification can be postponed
 	for _, image := range request.Images {
-		err = builder.CreateFormFileReader("image", image, "")
+		err = builder.CreateFormFileReader("image[]", image, "")
 		if err != nil {
 			return
 		}
