@@ -197,6 +197,13 @@ func (c *Client) CreateEditImage(ctx context.Context, request ImageEditRequest) 
 		return
 	}
 
+	if request.Model != "" {
+		err = builder.WriteField("model", request.Model)
+		if err != nil {
+			return
+		}
+	}
+
 	err = builder.WriteField("n", strconv.Itoa(request.N))
 	if err != nil {
 		return
@@ -260,6 +267,13 @@ func (c *Client) CreateVariImage(ctx context.Context, request ImageVariRequest) 
 	err = builder.WriteField("n", strconv.Itoa(request.N))
 	if err != nil {
 		return
+	}
+
+	if request.Model != "" {
+		err = builder.WriteField("model", request.Model)
+		if err != nil {
+			return
+		}
 	}
 
 	err = builder.WriteField("size", request.Size)
