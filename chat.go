@@ -443,6 +443,7 @@ type ChatCompletionChoice struct {
 	// content_filter: Omitted content due to a flag from our content filters
 	// null: API response still in progress or incomplete
 	FinishReason         FinishReason         `json:"finish_reason"`
+	NativeFinishReason   FinishReason         `json:"native_finish_reason,omitempty"`
 	LogProbs             *LogProbs            `json:"logprobs,omitempty"`
 	ContentFilterResults ContentFilterResults `json:"content_filter_results,omitempty"`
 }
