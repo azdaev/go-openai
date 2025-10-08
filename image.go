@@ -132,6 +132,23 @@ func (c *Client) CreateImage(ctx context.Context, request ImageRequest) (respons
 	return
 }
 
+// CreateImageHiggsfield - API call to create an image via Higgsfield
+func (c *Client) CreateImageHiggsfield(ctx context.Context, request ImageRequest) (response ImageResponse, err error) {
+	urlSuffix := "/images/generate"
+	req, err := c.newRequest(
+		ctx,
+		http.MethodPost,
+		c.fullURL(urlSuffix, withModel(request.Model)),
+		withBody(request),
+	)
+	if err != nil {
+		return
+	}
+
+	err = c.sendRequest(req, &response)
+	return
+}
+
 // WrapReader wraps an io.Reader with filename and Content-type.
 func WrapReader(rdr io.Reader, filename string, contentType string) io.Reader {
 	return file{rdr, filename, contentType}
@@ -230,6 +247,84 @@ func (c *Client) CreateEditImage(ctx context.Context, request ImageEditRequest) 
 		ctx,
 		http.MethodPost,
 		c.fullURL("/images/edits", withModel(request.Model)),
+		withBody(body),
+		withContentType(builder.FormDataContentType()),
+	)
+	if err != nil {
+		return
+	}
+
+	err = c.sendRequest(req, &response)
+	return
+}
+
+// CreateEditImageHiggsfield - API call to create an image based on other images via Higgsfield
+func (c *Client) CreateEditImageHiggsfield(ctx context.Context, request ImageEditRequest) (response ImageResponse, err error) {
+	body := &bytes.Buffer{}
+	builder := c.createFormBuilder(body)
+
+	// image, filename verification can be postponed
+	for i, image := range request.Images {
+		if i == 0 {
+			err = builder.CreateFormFileReader("base_image", image, "")
+			if err != nil {
+				return
+			}
+		}
+
+		err = builder.CreateFormFileReader("reference_images[]", image, "")
+		if err != nil {
+			return
+		}
+	}
+
+	// mask, it is optional
+	if request.Mask != nil {
+		// filename verification can be postponed
+		err = builder.CreateFormFileReader("mask", request.Mask, "")
+		if err != nil {
+			return
+		}
+	}
+
+	err = builder.WriteField("prompt", request.Prompt)
+	if err != nil {
+		return
+	}
+
+	if request.Model != "" {
+		err = builder.WriteField("model", request.Model)
+		if err != nil {
+			return
+		}
+	}
+
+	err = builder.WriteField("n", strconv.Itoa(request.N))
+	if err != nil {
+		return
+	}
+
+	err = builder.WriteField("size", request.Size)
+	if err != nil {
+		return
+	}
+
+	if request.ResponseFormat != "" {
+		err = builder.WriteField("response_format", request.ResponseFormat)
+		if err != nil {
+			return
+		}
+	}
+
+	err = builder.Close()
+	if err != nil {
+		return
+	}
+
+	req, err := c.newRequest(
+		ctx,
+		http.MethodPost,
+		c.fullURL("/images/edit", withModel(request.Model)),
 		withBody(body),
 		withContentType(builder.FormDataContentType()),
 	)
