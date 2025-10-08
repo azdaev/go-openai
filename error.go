@@ -36,6 +36,23 @@ type ErrorResponse struct {
 	Error *APIError `json:"error,omitempty"`
 }
 
+// HiggsFieldError represents error response from Higgsfield API.
+// Format: {"error": "message", "code": "error_code"}
+type HiggsFieldError struct {
+	Code           string `json:"code"`
+	Message        string `json:"error"`
+	HTTPStatus     string `json:"-"`
+	HTTPStatusCode int    `json:"-"`
+}
+
+func (e *HiggsFieldError) Error() string {
+	if e.HTTPStatusCode > 0 {
+		return fmt.Sprintf("higgsfield error, status code: %d, status: %s, code: %s, message: %s",
+			e.HTTPStatusCode, e.HTTPStatus, e.Code, e.Message)
+	}
+	return fmt.Sprintf("higgsfield error, code: %s, message: %s", e.Code, e.Message)
+}
+
 func (e *APIError) Error() string {
 	if e.HTTPStatusCode > 0 {
 		return fmt.Sprintf("error, status code: %d, status: %s, message: %s", e.HTTPStatusCode, e.HTTPStatus, e.Message)

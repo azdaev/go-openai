@@ -171,6 +171,22 @@ func (c *Client) sendRequestRaw(req *http.Request) (response RawResponse, err er
 	return
 }
 
+func (c *Client) sendRequestRawHiggsfield(req *http.Request) (response RawResponse, err error) {
+	resp, err := c.config.HTTPClient.Do(req) //nolint:bodyclose // body should be closed by outer function
+	if err != nil {
+		return
+	}
+
+	if isFailureStatusCode(resp) {
+		err = c.handleHiggsFieldErrorResp(resp)
+		return
+	}
+
+	response.SetHeader(resp.Header)
+	response.ReadCloser = resp.Body
+	return
+}
+
 func sendRequestStream[T streamable](client *Client, req *http.Request) (*streamReader[T], error) {
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "text/event-stream")
@@ -329,6 +345,28 @@ func (c *Client) handleErrorResp(resp *http.Response) error {
 	errRes.Error.HTTPStatus = resp.Status
 	errRes.Error.HTTPStatusCode = resp.StatusCode
 	return errRes.Error
+}
+
+func (c *Client) handleHiggsFieldErrorResp(resp *http.Response) error {
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return fmt.Errorf("error, reading response body: %w", err)
+	}
+
+	var hfErr HiggsFieldError
+	err = json.Unmarshal(body, &hfErr)
+	if err != nil {
+		return &RequestError{
+			HTTPStatus:     resp.Status,
+			HTTPStatusCode: resp.StatusCode,
+			Err:            err,
+			Body:           body,
+		}
+	}
+
+	hfErr.HTTPStatus = resp.Status
+	hfErr.HTTPStatusCode = resp.StatusCode
+	return &hfErr
 }
 
 func containsSubstr(s []string, e string) bool {

@@ -132,8 +132,9 @@ func (c *Client) CreateImage(ctx context.Context, request ImageRequest) (respons
 	return
 }
 
-// CreateImageHiggsfield - API call to create an image via Higgsfield
-func (c *Client) CreateImageHiggsfield(ctx context.Context, request ImageRequest) (response ImageResponse, err error) {
+// CreateImageHiggsfield - API call to create an image via Higgsfield.
+// Returns raw JPEG image data on success. Caller must close the response body.
+func (c *Client) CreateImageHiggsfield(ctx context.Context, request ImageRequest) (response RawResponse, err error) {
 	urlSuffix := "/images/generate"
 	req, err := c.newRequest(
 		ctx,
@@ -145,8 +146,7 @@ func (c *Client) CreateImageHiggsfield(ctx context.Context, request ImageRequest
 		return
 	}
 
-	err = c.sendRequest(req, &response)
-	return
+	return c.sendRequestRawHiggsfield(req)
 }
 
 // WrapReader wraps an io.Reader with filename and Content-type.
@@ -258,8 +258,9 @@ func (c *Client) CreateEditImage(ctx context.Context, request ImageEditRequest) 
 	return
 }
 
-// CreateEditImageHiggsfield - API call to create an image based on other images via Higgsfield
-func (c *Client) CreateEditImageHiggsfield(ctx context.Context, request ImageEditRequest) (response ImageResponse, err error) {
+// CreateEditImageHiggsfield - API call to create an image based on other images via Higgsfield.
+// Returns raw JPEG image data on success. Caller must close the response body.
+func (c *Client) CreateEditImageHiggsfield(ctx context.Context, request ImageEditRequest) (response RawResponse, err error) {
 	body := &bytes.Buffer{}
 	builder := c.createFormBuilder(body)
 
@@ -332,8 +333,7 @@ func (c *Client) CreateEditImageHiggsfield(ctx context.Context, request ImageEdi
 		return
 	}
 
-	err = c.sendRequest(req, &response)
-	return
+	return c.sendRequestRawHiggsfield(req)
 }
 
 // ImageVariRequest represents the request structure for the image API.
