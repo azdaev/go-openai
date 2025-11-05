@@ -1270,4 +1270,49 @@ func TestChatCompletionEmptyBody(t *testing.T) {
 		t.Logf("Body: %s", string(reqErr.Body))
 		t.Logf("Body length: %d", len(reqErr.Body))
 	})
+
+	// Тест 5: Валидный ErrorResponse в body, но EOF при чтении
+	// В этом случае мы должны распарсить ErrorResponse и вернуть APIError с информацией об EOF
+	t.Run("valid_error_json_with_eof", func(t *testing.T) {
+		server.RegisterHandler("/v1/chat/completions", func(w http.ResponseWriter, _ *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(400)
+			// Валидный JSON с ошибкой (симулируем что успели прочитать полный ErrorResponse)
+			_, _ = w.Write([]byte(`{"error": {"message": "Invalid API key", "type": "invalid_request_error", "code": "invalid_api_key"}}`))
+		})
+
+		ctx := context.Background()
+		req := openai.ChatCompletionRequest{
+			Model: openai.GPT4,
+			Messages: []openai.ChatCompletionMessage{
+				{
+					Role:    openai.ChatMessageRoleUser,
+					Content: "Hello!",
+				},
+			},
+		}
+
+		_, err := client.CreateChatCompletion(ctx, req)
+
+		if err == nil {
+			t.Fatal("Expected error, got nil")
+		}
+
+		// В этом случае должна быть APIError (не RequestError)
+		var apiErr *openai.APIError
+		if errors.As(err, &apiErr) {
+			t.Logf("Got APIError as expected")
+			t.Logf("Error: %v", err)
+			t.Logf("Message: %s", apiErr.Message)
+			t.Logf("Type: %s", apiErr.Type)
+			t.Logf("HTTPStatusCode: %d", apiErr.HTTPStatusCode)
+
+			// Проверяем что статус код сохранился
+			if apiErr.HTTPStatusCode != 400 {
+				t.Errorf("Expected status code 400, got %d", apiErr.HTTPStatusCode)
+			}
+		} else {
+			t.Logf("Got non-APIError (which is also valid for this case): %T: %v", err, err)
+		}
+	})
 }

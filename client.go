@@ -323,17 +323,29 @@ func (c *Client) baseURLWithAzureDeployment(baseURL, suffix, model string) (newB
 }
 
 func (c *Client) handleErrorResp(resp *http.Response) error {
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
+	body, readErr := io.ReadAll(resp.Body)
+
+	if readErr != nil {
+		if len(body) > 0 {
+			var errRes ErrorResponse
+			if err := json.Unmarshal(body, &errRes); err == nil && errRes.Error != nil {
+				errRes.Error.HTTPStatus = resp.Status
+				errRes.Error.HTTPStatusCode = resp.StatusCode
+				errRes.Error.Message = fmt.Sprintf("%s (error reading response: %v)", errRes.Error.Message, readErr)
+				return errRes.Error
+			}
+		}
+
 		return &RequestError{
 			HTTPStatus:     resp.Status,
 			HTTPStatusCode: resp.StatusCode,
-			Err:            fmt.Errorf("error reading response body: %w", err),
+			Err:            fmt.Errorf("error reading response body: %w", readErr),
 			Body:           body,
 		}
 	}
+
 	var errRes ErrorResponse
-	err = json.Unmarshal(body, &errRes)
+	err := json.Unmarshal(body, &errRes)
 	if err != nil || errRes.Error == nil {
 		reqErr := &RequestError{
 			HTTPStatus:     resp.Status,
@@ -353,18 +365,31 @@ func (c *Client) handleErrorResp(resp *http.Response) error {
 }
 
 func (c *Client) handleHiggsFieldErrorResp(resp *http.Response) error {
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
+	body, readErr := io.ReadAll(resp.Body)
+
+	if readErr != nil {
+		if len(body) > 0 {
+			var hfErr HiggsFieldError
+			if err := json.Unmarshal(body, &hfErr); err == nil && hfErr.Message != "" {
+				// Успешно распарсили HiggsFieldError из частичного body
+				hfErr.HTTPStatus = resp.Status
+				hfErr.HTTPStatusCode = resp.StatusCode
+				// Добавляем информацию что был EOF в message
+				hfErr.Message = fmt.Sprintf("%s (error reading response: %v)", hfErr.Message, readErr)
+				return &hfErr
+			}
+		}
+
 		return &RequestError{
 			HTTPStatus:     resp.Status,
 			HTTPStatusCode: resp.StatusCode,
-			Err:            fmt.Errorf("error reading response body: %w", err),
-			Body:           body, // body может быть частично прочитан даже при ошибке
+			Err:            fmt.Errorf("error reading response body: %w", readErr),
+			Body:           body,
 		}
 	}
 
 	var hfErr HiggsFieldError
-	err = json.Unmarshal(body, &hfErr)
+	err := json.Unmarshal(body, &hfErr)
 	if err != nil {
 		return &RequestError{
 			HTTPStatus:     resp.Status,

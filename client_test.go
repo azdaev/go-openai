@@ -170,7 +170,7 @@ func TestHandleErrorResp(t *testing.T) {
 					}
 				}`,
 			)),
-			expected: "error, status code: 401, status: , message: You didn't provide an API key. ....",
+			expected: "error, status code: 401, status: 401 Unauthorized, message: You didn't provide an API key. ....",
 		},
 		{
 			name:        "401 Azure Access Denied",
@@ -184,7 +184,7 @@ func TestHandleErrorResp(t *testing.T) {
 					}
 				}`,
 			)),
-			expected: "error, status code: 401, status: , message: Access denied due to Virtual Network/Firewall rules.",
+			expected: "error, status code: 401, status: 401 Unauthorized, message: Access denied due to Virtual Network/Firewall rules.",
 		},
 		{
 			name:        "503 Model Overloaded",
@@ -199,7 +199,7 @@ func TestHandleErrorResp(t *testing.T) {
 						"code":null
 					}
 				}`)),
-			expected: "error, status code: 503, status: , message: That model...",
+			expected: "error, status code: 503, status: 503 Service Unavailable, message: That model...",
 		},
 		{
 			name:        "503 no message (Unknown response)",
@@ -209,7 +209,7 @@ func TestHandleErrorResp(t *testing.T) {
 				{
 					"error":{}
 				}`)),
-			expected: `error, status code: 503, status: , message: , body: 
+			expected: `error, status code: 503, status: 503 Service Unavailable, message: , body: 
 				{
 					"error":{}
 				}`,
@@ -226,7 +226,7 @@ func TestHandleErrorResp(t *testing.T) {
 	<hr><center>nginx</center>
 	</body>
 	</html>`)),
-			expected: `error, status code: 413, status: , message: invalid character '<' looking for beginning of value, body: 
+			expected: `error, status code: 413, status: 413 Request Entity Too Large, message: invalid character '<' looking for beginning of value, body: 
 	<html>
 	<head><title>413 Request Entity Too Large</title></head>
 	<body>
@@ -240,7 +240,7 @@ func TestHandleErrorResp(t *testing.T) {
 			httpCode:    http.StatusRequestEntityTooLarge,
 			contentType: "text/html",
 			body:        &errorReader{err: errors.New("errorReader")},
-			expected:    "error, reading response body: errorReader",
+			expected:    "error, status code: 413, status: 413 Request Entity Too Large, message: error reading response body: errorReader, body: ",
 		},
 	}
 
@@ -252,6 +252,7 @@ func TestHandleErrorResp(t *testing.T) {
 				},
 			}
 			testCase.StatusCode = tc.httpCode
+			testCase.Status = fmt.Sprintf("%d %s", tc.httpCode, http.StatusText(tc.httpCode))
 			testCase.Body = io.NopCloser(tc.body)
 			err := client.handleErrorResp(testCase)
 			t.Log(err.Error())
