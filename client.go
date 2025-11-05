@@ -325,7 +325,12 @@ func (c *Client) baseURLWithAzureDeployment(baseURL, suffix, model string) (newB
 func (c *Client) handleErrorResp(resp *http.Response) error {
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return fmt.Errorf("error, reading response body: %w", err)
+		return &RequestError{
+			HTTPStatus:     resp.Status,
+			HTTPStatusCode: resp.StatusCode,
+			Err:            fmt.Errorf("error reading response body: %w", err),
+			Body:           body,
+		}
 	}
 	var errRes ErrorResponse
 	err = json.Unmarshal(body, &errRes)
@@ -350,7 +355,12 @@ func (c *Client) handleErrorResp(resp *http.Response) error {
 func (c *Client) handleHiggsFieldErrorResp(resp *http.Response) error {
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return fmt.Errorf("error, reading response body: %w", err)
+		return &RequestError{
+			HTTPStatus:     resp.Status,
+			HTTPStatusCode: resp.StatusCode,
+			Err:            fmt.Errorf("error reading response body: %w", err),
+			Body:           body, // body может быть частично прочитан даже при ошибке
+		}
 	}
 
 	var hfErr HiggsFieldError

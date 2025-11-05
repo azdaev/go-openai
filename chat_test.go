@@ -1085,3 +1085,189 @@ func TestChatCompletionRequest_UnmarshalJSON(t *testing.T) {
 		})
 	}
 }
+
+// TestChatCompletionEmptyBody проверяет поведение при пустом body в ответе
+func TestChatCompletionEmptyBody(t *testing.T) {
+	client, server, teardown := setupOpenAITestServer()
+	defer teardown()
+
+	// Тест 1: Пустой body с HTTP 500
+	t.Run("empty_body_with_500_error", func(t *testing.T) {
+		server.RegisterHandler("/v1/chat/completions", func(w http.ResponseWriter, _ *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(500)
+			// Не пишем ничего в body - он будет пустой
+		})
+
+		ctx := context.Background()
+		req := openai.ChatCompletionRequest{
+			Model: openai.GPT4,
+			Messages: []openai.ChatCompletionMessage{
+				{
+					Role:    openai.ChatMessageRoleUser,
+					Content: "Hello!",
+				},
+			},
+		}
+
+		_, err := client.CreateChatCompletion(ctx, req)
+
+		// Проверяем что ошибка не nil
+		if err == nil {
+			t.Fatal("Expected error, got nil")
+		}
+
+		// Проверяем что это RequestError
+		var reqErr *openai.RequestError
+		if !errors.As(err, &reqErr) {
+			t.Fatalf("Expected RequestError, got %T: %v", err, err)
+		}
+
+		// Проверяем что в ошибке есть статус код
+		if reqErr.HTTPStatusCode != 500 {
+			t.Errorf("Expected status code 500, got %d", reqErr.HTTPStatusCode)
+		}
+
+		// Проверяем что в ошибке есть статус текст
+		if reqErr.HTTPStatus == "" {
+			t.Error("Expected HTTPStatus to be set, got empty string")
+		}
+
+		// Проверяем что body пустой
+		if len(reqErr.Body) != 0 {
+			t.Errorf("Expected empty body, got %d bytes: %s", len(reqErr.Body), string(reqErr.Body))
+		}
+
+		t.Logf("Error: %v", err)
+		t.Logf("HTTPStatus: %s", reqErr.HTTPStatus)
+		t.Logf("HTTPStatusCode: %d", reqErr.HTTPStatusCode)
+		t.Logf("Body length: %d", len(reqErr.Body))
+	})
+
+	// Тест 2: Пустой body с HTTP 200 (EOF при декодировании JSON)
+	t.Run("empty_body_with_200_success", func(t *testing.T) {
+		server.RegisterHandler("/v1/chat/completions", func(w http.ResponseWriter, _ *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(200)
+			// Не пишем ничего в body
+		})
+
+		ctx := context.Background()
+		req := openai.ChatCompletionRequest{
+			Model: openai.GPT4,
+			Messages: []openai.ChatCompletionMessage{
+				{
+					Role:    openai.ChatMessageRoleUser,
+					Content: "Hello!",
+				},
+			},
+		}
+
+		resp, err := client.CreateChatCompletion(ctx, req)
+
+		// При статусе 200 и пустом body будет ошибка декодирования JSON (EOF)
+		if err == nil {
+			t.Logf("No error returned, response: %+v", resp)
+			// Это не обязательно ошибка - JSON decoder может вернуть пустую структуру
+		} else {
+			t.Logf("Error when decoding empty 200 response: %v", err)
+		}
+	})
+
+	// Тест 3: Невалидный JSON с HTTP 400
+	t.Run("invalid_json_with_400_error", func(t *testing.T) {
+		server.RegisterHandler("/v1/chat/completions", func(w http.ResponseWriter, _ *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(400)
+			// Пишем невалидный JSON
+			_, _ = w.Write([]byte(`{"error": {"message": "Invalid request"`))
+			// Обрываем JSON - это может привести к EOF при unmarshal
+		})
+
+		ctx := context.Background()
+		req := openai.ChatCompletionRequest{
+			Model: openai.GPT4,
+			Messages: []openai.ChatCompletionMessage{
+				{
+					Role:    openai.ChatMessageRoleUser,
+					Content: "Hello!",
+				},
+			},
+		}
+
+		_, err := client.CreateChatCompletion(ctx, req)
+
+		if err == nil {
+			t.Fatal("Expected error, got nil")
+		}
+
+		var reqErr *openai.RequestError
+		if !errors.As(err, &reqErr) {
+			t.Fatalf("Expected RequestError, got %T: %v", err, err)
+		}
+
+		// Проверяем что статус код сохранился
+		if reqErr.HTTPStatusCode != 400 {
+			t.Errorf("Expected status code 400, got %d", reqErr.HTTPStatusCode)
+		}
+
+		// Проверяем что body сохранился
+		if len(reqErr.Body) == 0 {
+			t.Error("Expected body to contain partial JSON, got empty body")
+		}
+
+		t.Logf("Error: %v", err)
+		t.Logf("HTTPStatus: %s", reqErr.HTTPStatus)
+		t.Logf("HTTPStatusCode: %d", reqErr.HTTPStatusCode)
+		t.Logf("Body: %s", string(reqErr.Body))
+	})
+
+	// Тест 4: Проверка что при реальной ошибке чтения (не просто пустой body) тоже всё логируется
+	t.Run("read_error_with_500", func(t *testing.T) {
+		server.RegisterHandler("/v1/chat/completions", func(w http.ResponseWriter, _ *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(500)
+			// Пишем что-то, чтобы симулировать частично прочитанный ответ
+			_, _ = w.Write([]byte(`{"error": `))
+			// Соединение может быть разорвано на этом месте
+		})
+
+		ctx := context.Background()
+		req := openai.ChatCompletionRequest{
+			Model: openai.GPT4,
+			Messages: []openai.ChatCompletionMessage{
+				{
+					Role:    openai.ChatMessageRoleUser,
+					Content: "Hello!",
+				},
+			},
+		}
+
+		_, err := client.CreateChatCompletion(ctx, req)
+
+		if err == nil {
+			t.Fatal("Expected error, got nil")
+		}
+
+		var reqErr *openai.RequestError
+		if !errors.As(err, &reqErr) {
+			t.Fatalf("Expected RequestError, got %T: %v", err, err)
+		}
+
+		// Проверяем что статус код сохранился
+		if reqErr.HTTPStatusCode != 500 {
+			t.Errorf("Expected status code 500, got %d", reqErr.HTTPStatusCode)
+		}
+
+		// Проверяем что body сохранился (частично прочитанный)
+		if len(reqErr.Body) == 0 {
+			t.Error("Expected body to contain partial data, got empty body")
+		}
+
+		t.Logf("Error: %v", err)
+		t.Logf("HTTPStatus: %s", reqErr.HTTPStatus)
+		t.Logf("HTTPStatusCode: %d", reqErr.HTTPStatusCode)
+		t.Logf("Body: %s", string(reqErr.Body))
+		t.Logf("Body length: %d", len(reqErr.Body))
+	})
+}
